@@ -476,7 +476,7 @@ class KeyguardStatusViewManager implements OnClickListener {
                     int dateWidth = (int) (findViewById(R.id.time).getWidth() * 1.2);
 
                     for (EventBundle e : mCalendarEvents) {
-                        String title = e.title + (e.dayString.isEmpty() ? "" : ",");
+                        String title = e.title + (e.dayString.isEmpty() ? " " : ", ");
                         String details = e.dayString
                                 + ((e.allDay) ? " all-day " : " at " + DateFormat.format(
                                         DateFormat.is24HourFormat(getContext()) ? "kk:mm"
@@ -488,17 +488,14 @@ class KeyguardStatusViewManager implements OnClickListener {
                             cEntry.setColor(e.color);
                         mCalendarView.addView(cEntry);
                     }
-                    mCalendarView.setFlipInterval(interval);
-                    mCalendarView.setVisibility(View.VISIBLE);
-                    mCalendarView.bringChildToFront(mCalendarView.getChildAt(0));
                     if (!multipleEventsEnabled || mCalendarEvents.size() <= 1) {
                         mCalendarView.stopFlipping();
                     } else {
-                        Log.d(TAG, "multiple events, flipping");
+                        mCalendarView.setFlipInterval(interval);
                         mCalendarView.startFlipping();
                     }
+                    mCalendarView.setVisibility(View.VISIBLE);
                 } else {
-                    Log.d(TAG, "hide calendar");
                     mCalendarView.setVisibility(View.GONE);
                 }
             }
@@ -676,8 +673,9 @@ class KeyguardStatusViewManager implements OnClickListener {
                 break;
 
             case NetworkLocked:
-                carrierText = makeCarierString(mPlmn,
-                        getContext().getText(R.string.lockscreen_network_locked_message));
+                carrierText = makeCarrierStringOnEmergencyCapable(
+                        getContext().getText(R.string.lockscreen_network_locked_message),
+                        mPlmn);
                 carrierHelpTextId = R.string.lockscreen_instructions_when_pattern_disabled;
                 break;
 
@@ -689,10 +687,9 @@ class KeyguardStatusViewManager implements OnClickListener {
                 // has some connectivity. Otherwise, it should be null or empty
                 // and just show
                 // "No SIM card"
-                carrierText = getContext().getText(R.string.lockscreen_missing_sim_message_short);
-                if (mLockPatternUtils.isEmergencyCallCapable()) {
-                    carrierText = makeCarierString(carrierText, mPlmn);
-                }
+                carrierText =  makeCarrierStringOnEmergencyCapable(
+                        getContext().getText(R.string.lockscreen_missing_sim_message_short),
+                        mPlmn);
                 carrierHelpTextId = R.string.lockscreen_missing_sim_instructions_long;
                 break;
 
@@ -703,21 +700,24 @@ class KeyguardStatusViewManager implements OnClickListener {
                 break;
 
             case SimMissingLocked:
-                carrierText = makeCarierString(mPlmn,
-                        getContext().getText(R.string.lockscreen_missing_sim_message_short));
+                carrierText =  makeCarrierStringOnEmergencyCapable(
+                        getContext().getText(R.string.lockscreen_missing_sim_message_short),
+                        mPlmn);
                 carrierHelpTextId = R.string.lockscreen_missing_sim_instructions;
                 mEmergencyButtonEnabledBecauseSimLocked = true;
                 break;
 
             case SimLocked:
-                carrierText = makeCarierString(mPlmn,
-                        getContext().getText(R.string.lockscreen_sim_locked_message));
+                carrierText = makeCarrierStringOnEmergencyCapable(
+                        getContext().getText(R.string.lockscreen_sim_locked_message),
+                        mPlmn);
                 mEmergencyButtonEnabledBecauseSimLocked = true;
                 break;
 
             case SimPukLocked:
-                carrierText = makeCarierString(mPlmn,
-                        getContext().getText(R.string.lockscreen_sim_puk_locked_message));
+                carrierText = makeCarrierStringOnEmergencyCapable(
+                        getContext().getText(R.string.lockscreen_sim_puk_locked_message),
+                        mPlmn);
                 if (!mLockPatternUtils.isPukUnlockScreenEnable()) {
                     // This means we're showing the PUK unlock screen
                     mEmergencyButtonEnabledBecauseSimLocked = true;
@@ -736,6 +736,18 @@ class KeyguardStatusViewManager implements OnClickListener {
 
         setCarrierHelpText(carrierHelpTextId);
         updateEmergencyCallButtonState(mPhoneState);
+    }
+
+
+    /*
+     * Add emergencyCallMessage to carrier string only if phone supports emergency calls.
+     */
+    private CharSequence makeCarrierStringOnEmergencyCapable(
+            CharSequence simMessage, CharSequence emergencyCallMessage) {
+        if (mLockPatternUtils.isEmergencyCallCapable()) {
+            return makeCarierString(simMessage, emergencyCallMessage);
+        }
+        return simMessage;
     }
 
     private View findViewById(int id) {
